@@ -97,9 +97,12 @@ export default function ChatInterface() {
 
       case 'model_response':
         if (chunk.model_id && chunk.content) {
+          const modelId = chunk.model_id;
+          const content = chunk.content;
+
           setFirstOpinions((prev) => {
             // Check if this model already has a response
-            const existing = prev.find((r) => r.model_id === chunk.model_id);
+            const existing = prev.find((r) => r.model_id === modelId);
             if (existing) {
               return prev;
             }
@@ -107,8 +110,8 @@ export default function ChatInterface() {
             return [
               ...prev,
               {
-                model_id: chunk.model_id,
-                response: chunk.content || '',
+                model_id: modelId,
+                response: content,
                 timestamp: Date.now(),
               },
             ];
@@ -118,11 +121,14 @@ export default function ChatInterface() {
 
       case 'review':
         if (chunk.model_id && chunk.data) {
+          const modelId = chunk.model_id;
+          const rankings = chunk.data.rankings || [];
+
           setReviews((prev) => [
             ...prev,
             {
-              reviewer_model: chunk.model_id,
-              rankings: chunk.data.rankings || [],
+              reviewer_model: modelId,
+              rankings: rankings,
               timestamp: Date.now(),
             },
           ]);
