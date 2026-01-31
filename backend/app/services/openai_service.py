@@ -15,6 +15,16 @@ class OpenAIService:
         self.base_url = settings.openai_base_url
         self.timeout = settings.request_timeout
 
+    def _is_gpt5_model(self, model: str) -> bool:
+        """Check if the model is GPT-5.x which uses the responses endpoint."""
+        return model.startswith("gpt-5")
+
+    def _get_endpoint(self, model: str) -> str:
+        """Get the appropriate endpoint for the model."""
+        if self._is_gpt5_model(model):
+            return f"{self.base_url}/chat/responses"
+        return f"{self.base_url}/chat/completions"
+
     async def generate_response(
         self,
         model: str,
@@ -29,21 +39,36 @@ class OpenAIService:
                 "Content-Type": "application/json",
             }
 
-            payload = {
-                "model": model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            }
+            # GPT-5 uses 'input' instead of 'messages'
+            if self._is_gpt5_model(model):
+                payload = {
+                    "model": model,
+                    "input": messages[0]["content"] if len(messages) == 1 else "\n\n".join([f"{m['role']}: {m['content']}" for m in messages]),
+                    "text": {
+                        "verbosity": "medium"
+                    }
+                }
+            else:
+                payload = {
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                }
 
+            endpoint = self._get_endpoint(model)
             response = await client.post(
-                f"{self.base_url}/chat/completions",
+                endpoint,
                 headers=headers,
                 json=payload,
             )
 
             response.raise_for_status()
             data = response.json()
+
+            # GPT-5 responses have different structure
+            if self._is_gpt5_model(model):
+                return data["text"]["content"]
 
             return data["choices"][0]["message"]["content"]
 
@@ -61,17 +86,30 @@ class OpenAIService:
                 "Content-Type": "application/json",
             }
 
-            payload = {
-                "model": model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": True,
-            }
+            # GPT-5 uses 'input' instead of 'messages'
+            if self._is_gpt5_model(model):
+                payload = {
+                    "model": model,
+                    "input": messages[0]["content"] if len(messages) == 1 else "\n\n".join([f"{m['role']}: {m['content']}" for m in messages]),
+                    "text": {
+                        "verbosity": "medium"
+                    },
+                    "stream": True,
+                }
+            else:
+                payload = {
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "stream": True,
+                }
+
+            endpoint = self._get_endpoint(model)
 
             async with client.stream(
                 "POST",
-                f"{self.base_url}/chat/completions",
+                endpoint,
                 headers=headers,
                 json=payload,
             ) as response:
@@ -88,7 +126,15 @@ class OpenAIService:
                             import json
 
                             data = json.loads(data_str)
-                            if (
+
+                            # GPT-5 streaming format
+                            if self._is_gpt5_model(model):
+                                if "text" in data and "delta" in data["text"]:
+                                    content = data["text"]["delta"]
+                                    if content:
+                                        yield content
+                            # GPT-4 and earlier format
+                            elif (
                                 "choices" in data
                                 and len(data["choices"]) > 0
                                 and "delta" in data["choices"][0]
@@ -141,7 +187,11 @@ Your task:
 Provide a clear, well-structured response that directly answers the user's query. Focus on accuracy, completeness, and clarity. Do not mention the internal council process - just provide the final answer as if it came from a single, highly knowledgeable source.
 """
 
-        messages = [{"role": "user", "content": chairman_prompt}]
+        # For GPT-5, use single message; for GPT-4, use message array
+        if self._is_gpt5_model(settings.chairman_model):
+            messages = [{"role": "user", "content": chairman_prompt}]
+        else:
+            messages = [{"role": "user", "content": chairman_prompt}]
 
         return await self.generate_response(
             model=settings.chairman_model,
