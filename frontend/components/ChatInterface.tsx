@@ -6,15 +6,24 @@ import MessageList, { Message } from './MessageList';
 import StageIndicator, { Stage } from './StageIndicator';
 import TabView from './TabView';
 import ModelSelector from './ModelSelector';
+import CouncilDeliberation from './CouncilDeliberation';
+
+// Extended message type with council data
+export interface CouncilMessage extends Message {
+  councilData?: {
+    firstOpinions: ModelResponse[];
+    reviews: ReviewResponse[];
+  };
+}
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<CouncilMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
 
-  // Council state
+  // Council state (current deliberation)
   const [currentStage, setCurrentStage] = useState<Stage>('idle');
   const [stageMessage, setStageMessage] = useState('');
   const [firstOpinions, setFirstOpinions] = useState<ModelResponse[]>([]);
@@ -142,13 +151,17 @@ export default function ChatInterface() {
         break;
 
       case 'complete':
-        // Add the final response as an assistant message
+        // Add the final response as an assistant message with council data
         if (finalResponse) {
-          const assistantMessage: Message = {
+          const assistantMessage: CouncilMessage = {
             id: Date.now().toString(),
             role: 'assistant',
             content: finalResponse,
             timestamp: Date.now(),
+            councilData: {
+              firstOpinions: firstOpinions,
+              reviews: reviews,
+            },
           };
           setMessages((prev) => [...prev, assistantMessage]);
         }
