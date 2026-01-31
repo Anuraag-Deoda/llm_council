@@ -22,7 +22,7 @@ class OpenAIService:
     def _get_endpoint(self, model: str) -> str:
         """Get the appropriate endpoint for the model."""
         if self._is_gpt5_model(model):
-            return f"{self.base_url}/chat/responses"
+            return f"{self.base_url}/responses"
         return f"{self.base_url}/chat/completions"
 
     async def generate_response(
