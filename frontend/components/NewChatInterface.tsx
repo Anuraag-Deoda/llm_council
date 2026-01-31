@@ -2,10 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { streamChat, streamIndividualChat, ModelInfo, fetchModels, ModelResponse, ReviewResponse, StreamChunk } from '@/lib/api';
-import Sidebar, { Chat, ChatType } from './Sidebar';
+import AdvancedSidebar, { Chat, ChatType } from './AdvancedSidebar';
 import MessageBubble from './MessageBubble';
 import StageIndicator, { Stage } from './StageIndicator';
 import CouncilSummaryCard from './CouncilSummaryCard';
+import { ToastProvider, useToast } from './Toast';
 
 interface Message {
   id: string;
@@ -36,7 +37,9 @@ interface CouncilState {
   showSummary: boolean;
 }
 
-export default function NewChatInterface() {
+function ChatInterfaceContent() {
+  const { showToast } = useToast();
+
   // Models
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,6 +49,9 @@ export default function NewChatInterface() {
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [activeChatType, setActiveChatType] = useState<ChatType | null>(null);
   const [activeModelId, setActiveModelId] = useState<string | null>(null);
+
+  // Sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Messages for active chat
   const [messages, setMessages] = useState<Message[]>([]);
@@ -68,6 +74,25 @@ export default function NewChatInterface() {
   useEffect(() => {
     loadModels();
     loadConversationsFromStorage();
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+N: New chat
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        handleNewChat('council');
+      }
+      // Ctrl+B: Toggle sidebar
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setIsSidebarOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Scroll to bottom when messages change
@@ -155,6 +180,64 @@ export default function NewChatInterface() {
       isProcessing: false,
       showSummary: false,
     });
+
+    // Close sidebar on mobile after creating chat
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  const handleDeleteChat = (chatId: string) => {
+    // Remove conversation
+    const updatedConversations = conversations.filter((c) => c.id !== chatId);
+    setConversations(updatedConversations);
+    saveConversationsToStorage(updatedConversations);
+
+    // Remove messages
+    localStorage.removeItem(`llm_council_messages_${chatId}`);
+
+    // If deleted chat was active, clear active state
+    if (activeChat === chatId) {
+      setActiveChat(null);
+      setActiveChatType(null);
+      setActiveModelId(null);
+      setMessages([]);
+      setCouncilState({
+        stage: 'idle',
+        stageMessage: '',
+        responses: [],
+        reviews: [],
+        isProcessing: false,
+        showSummary: false,
+      });
+    }
+  };
+
+  const handleClearAll = () => {
+    // Clear all conversations
+    setConversations([]);
+    saveConversationsToStorage([]);
+
+    // Clear all message data
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('llm_council_messages_')) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Reset active state
+    setActiveChat(null);
+    setActiveChatType(null);
+    setActiveModelId(null);
+    setMessages([]);
+    setCouncilState({
+      stage: 'idle',
+      stageMessage: '',
+      responses: [],
+      reviews: [],
+      isProcessing: false,
+      showSummary: false,
+    });
   };
 
   const handleSelectChat = (chatId: string) => {
@@ -173,6 +256,11 @@ export default function NewChatInterface() {
       isProcessing: false,
       showSummary: false,
     });
+
+    // Close sidebar on mobile after selecting chat
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
   };
 
   const updateConversationLastMessage = (chatId: string, message: string) => {
@@ -411,14 +499,18 @@ export default function NewChatInterface() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
-      <Sidebar
+      <AdvancedSidebar
         models={models}
         conversations={conversations}
         activeChat={activeChat}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
+        onDeleteChat={handleDeleteChat}
+        onClearAll={handleClearAll}
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
 
       {/* Main Chat Area */}
@@ -426,15 +518,26 @@ export default function NewChatInterface() {
         {activeChat ? (
           <>
             {/* Chat Header */}
-            <div className="bg-white border-b border-gray-200 px-6 py-4">
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                  {/* Mobile Sidebar Toggle */}
+                  <button
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Toggle sidebar"
+                  >
+                    <svg className="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+
                   <span className="text-2xl">
                     {activeChatType === 'council' ? '🏛️' : '🤖'}
                   </span>
                   <div>
-                    <h2 className="font-semibold text-gray-900">{getActiveChatName()}</h2>
-                    <p className="text-xs text-gray-500">
+                    <h2 className="font-semibold text-gray-900 dark:text-white">{getActiveChatName()}</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {activeChatType === 'council'
                         ? `${models.length} members`
                         : 'Individual chat'}
@@ -445,7 +548,7 @@ export default function NewChatInterface() {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50">
+            <div className="flex-1 overflow-y-auto px-6 py-4 bg-gray-50 dark:bg-gray-900">
               {/* Stage Indicator for Council */}
               {activeChatType === 'council' && councilState.isProcessing && (
                 <div className="mb-4">
@@ -464,7 +567,7 @@ export default function NewChatInterface() {
                       <span className="text-6xl mb-4 block">
                         {activeChatType === 'council' ? '🏛️' : '🤖'}
                       </span>
-                      <p className="text-gray-500">
+                      <p className="text-gray-500 dark:text-gray-400">
                         {activeChatType === 'council'
                           ? 'Ask a question to the council!'
                           : 'Start chatting with this model!'}
@@ -498,7 +601,7 @@ export default function NewChatInterface() {
             </div>
 
             {/* Input Area */}
-            <div className="bg-white border-t border-gray-200 px-6 py-4">
+            <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
               <div className="max-w-4xl mx-auto flex gap-3">
                 <textarea
                   ref={inputRef}
@@ -506,14 +609,14 @@ export default function NewChatInterface() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="flex-1 px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   rows={1}
                   disabled={loading}
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={loading || !input.trim()}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+                  className="px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors font-medium"
                 >
                   {loading ? '...' : '➤'}
                 </button>
@@ -522,14 +625,14 @@ export default function NewChatInterface() {
           </>
         ) : (
           /* No Chat Selected */
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
             <div className="text-center">
               <span className="text-8xl mb-6 block">🏛️</span>
-              <h2 className="text-2xl font-bold text-gray-300 mb-2">Welcome to LLM Council</h2>
-              <p className="text-gray-500 mb-6">
+              <h2 className="text-2xl font-bold text-gray-300 dark:text-gray-600 mb-2">Welcome to LLM Council</h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
                 Select a conversation or start a new chat
               </p>
-              <div className="space-y-2 text-sm text-gray-400">
+              <div className="space-y-2 text-sm text-gray-400 dark:text-gray-500">
                 <p>💬 Council Group: All models collaborate</p>
                 <p>🤖 Individual: Chat with specific models</p>
               </div>
@@ -538,5 +641,13 @@ export default function NewChatInterface() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function NewChatInterface() {
+  return (
+    <ToastProvider>
+      <ChatInterfaceContent />
+    </ToastProvider>
   );
 }

@@ -57,22 +57,22 @@ export default function CouncilSummaryCard({ rankings, models }: CouncilSummaryC
   const winner = aggregateRankings[0];
 
   return (
-    <div className="my-4 border-2 border-yellow-400 rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 shadow-lg overflow-hidden">
+    <div className="my-4 border-2 border-yellow-400 dark:border-yellow-600 rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 shadow-lg overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-yellow-100/50 transition-colors"
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-yellow-100/50 dark:hover:bg-yellow-900/50 transition-colors"
       >
         <div className="flex items-center gap-3">
           <span className="text-3xl">🏆</span>
           <div className="text-left">
-            <h3 className="text-lg font-bold text-gray-900">Peer Review Results</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Peer Review Results</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               {rankings.length} councilors reviewed {aggregateRankings.length} responses
             </p>
           </div>
         </div>
-        <span className="text-gray-400 text-xl">{isExpanded ? '▼' : '▶'}</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xl">{isExpanded ? '▼' : '▶'}</span>
       </button>
 
       {isExpanded && (
@@ -104,12 +104,12 @@ export default function CouncilSummaryCard({ rankings, models }: CouncilSummaryC
                 key={ranking.modelId}
                 className={`flex items-center gap-3 p-3 rounded-lg border-2 ${
                   index === 0
-                    ? 'bg-yellow-100 border-yellow-400'
+                    ? 'bg-yellow-100 dark:bg-yellow-900/40 border-yellow-400 dark:border-yellow-600'
                     : index === 1
-                    ? 'bg-gray-100 border-gray-300'
+                    ? 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600'
                     : index === 2
-                    ? 'bg-orange-100 border-orange-300'
-                    : 'bg-white border-gray-200'
+                    ? 'bg-orange-100 dark:bg-orange-900/40 border-orange-300 dark:border-orange-600'
+                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                 }`}
               >
                 {/* Medal */}
@@ -119,8 +119,8 @@ export default function CouncilSummaryCard({ rankings, models }: CouncilSummaryC
 
                 {/* Model Name */}
                 <div className="flex-1">
-                  <div className="font-semibold text-gray-900">{ranking.modelName}</div>
-                  <div className="text-xs text-gray-600">
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">{ranking.modelName}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
                     Reviewed by {ranking.votes} councilor{ranking.votes > 1 ? 's' : ''}
                     {ranking.topRankings > 0 && ` • ${ranking.topRankings} top vote${ranking.topRankings > 1 ? 's' : ''}`}
                   </div>
@@ -128,8 +128,8 @@ export default function CouncilSummaryCard({ rankings, models }: CouncilSummaryC
 
                 {/* Average Rank */}
                 <div className="text-right">
-                  <div className="text-xl font-bold text-gray-900">{ranking.averageRank.toFixed(2)}</div>
-                  <div className="text-xs text-gray-500">avg rank</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{ranking.averageRank.toFixed(2)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">avg rank</div>
                 </div>
               </div>
             ))}
@@ -137,14 +137,14 @@ export default function CouncilSummaryCard({ rankings, models }: CouncilSummaryC
 
           {/* Detailed Reviews */}
           <details className="mt-4">
-            <summary className="cursor-pointer text-sm font-semibold text-gray-700 hover:text-gray-900 flex items-center gap-2">
+            <summary className="cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-2">
               <span>📋</span>
               <span>View detailed reviews</span>
             </summary>
             <div className="mt-3 space-y-3">
               {rankings.map((review, idx) => (
-                <div key={idx} className="bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <div key={idx} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <div className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
                     <span>👨‍⚖️</span>
                     <span>
                       {models.find((m) => m.id === review.reviewer_model)?.name ||
@@ -154,14 +154,14 @@ export default function CouncilSummaryCard({ rankings, models }: CouncilSummaryC
                   </div>
                   <div className="space-y-2">
                     {review.rankings.map((r, i) => (
-                      <div key={i} className="text-sm pl-4 border-l-2 border-gray-300">
-                        <div className="font-medium text-gray-900">
+                      <div key={i} className="text-sm pl-4 border-l-2 border-gray-300 dark:border-gray-600">
+                        <div className="font-medium text-gray-900 dark:text-gray-100">
                           #{r.rank}:{' '}
                           {models.find((m) => m.id === r.model_id)?.name ||
                             r.model_id.split('/').pop()?.split(':')[0] ||
                             r.model_id}
                         </div>
-                        <div className="text-gray-600 text-xs mt-1">{r.reasoning}</div>
+                        <div className="text-gray-600 dark:text-gray-400 text-xs mt-1">{r.reasoning}</div>
                       </div>
                     ))}
                   </div>

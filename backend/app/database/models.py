@@ -46,7 +46,7 @@ class Conversation(Base):
 
     # Metadata
     model_id = Column(String(100), nullable=True)  # For individual chats
-    metadata = Column(JSON, default=dict)
+    extra_data = Column(JSON, default=dict)
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -83,7 +83,7 @@ class Message(Base):
     model_name = Column(String(255), nullable=True)
 
     # Metadata
-    metadata = Column(JSON, default=dict)
+    extra_data = Column(JSON, default=dict)
 
     # Performance metrics
     latency_ms = Column(Integer, nullable=True)  # Response time in milliseconds
@@ -122,7 +122,7 @@ class ModelInfo(Base):
     cost_per_1k_output_tokens = Column(Float, default=0.0)
 
     # Metadata
-    metadata = Column(JSON, default=dict)
+    extra_data = Column(JSON, default=dict)
     capabilities = Column(JSON, default=list)  # e.g., ["streaming", "function_calling"]
 
     # Timestamps
@@ -168,7 +168,7 @@ class ConversationAnalytics(Base):
     consensus_score = Column(Float, nullable=True)  # Measure of agreement
 
     # Metadata
-    metadata = Column(JSON, default=dict)
+    extra_data = Column(JSON, default=dict)
 
     # Timestamp
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
@@ -250,7 +250,7 @@ class CouncilConfiguration(Base):
     stage3_prompt_template = Column(Text, nullable=True)
 
     # Metadata
-    metadata = Column(JSON, default=dict)
+    extra_data = Column(JSON, default=dict)
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -278,7 +278,7 @@ class RateLimitLog(Base):
     window_end = Column(DateTime(timezone=True), nullable=False)
 
     # Metadata
-    metadata = Column(JSON, default=dict)
+    extra_data = Column(JSON, default=dict)
 
     # Timestamp
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
@@ -305,7 +305,7 @@ class CachedResponse(Base):
 
     # Metadata
     hit_count = Column(Integer, default=0)
-    metadata = Column(JSON, default=dict)
+    extra_data = Column(JSON, default=dict)
 
     # TTL
     created_at = Column(DateTime(timezone=True), server_default=func.now())

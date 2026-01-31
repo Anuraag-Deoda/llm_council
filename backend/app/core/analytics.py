@@ -60,7 +60,7 @@ class AnalyticsService:
                 "model_count": len(models_used),
                 "peer_review_scores": peer_review_scores,
                 "consensus_score": consensus_score,
-                "metadata": {
+                "extra_data": {
                     "stage_metrics": stage_metrics
                 }
             })
