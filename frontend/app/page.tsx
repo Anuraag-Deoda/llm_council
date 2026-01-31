@@ -1,5 +1,10 @@
 import NewChatInterface from '@/components/NewChatInterface';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export default function Home() {
-  return <NewChatInterface />;
+  return (
+    <ThemeProvider>
+      <NewChatInterface />
+    </ThemeProvider>
+  );
 }
