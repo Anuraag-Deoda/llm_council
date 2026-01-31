@@ -129,10 +129,15 @@ class OpenAIService:
 
                             # GPT-5 streaming format
                             if self._is_gpt5_model(model):
-                                if "text" in data and "delta" in data["text"]:
-                                    content = data["text"]["delta"]
-                                    if content:
-                                        yield content
+                                if "text" in data:
+                                    # GPT-5 can return text as dict with delta or directly
+                                    if isinstance(data["text"], dict) and "delta" in data["text"]:
+                                        content = data["text"]["delta"]
+                                        if content:
+                                            yield content
+                                    elif isinstance(data["text"], str):
+                                        # Sometimes text is directly a string
+                                        yield data["text"]
                             # GPT-4 and earlier format
                             elif (
                                 "choices" in data
