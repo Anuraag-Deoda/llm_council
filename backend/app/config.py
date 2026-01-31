@@ -1,8 +1,8 @@
 """
 Configuration settings for the LLM Council application.
 """
-import os
-from typing import List
+from typing import List, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     ]
 
     # Application Settings
-    cors_origins: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    cors_origins: Union[str, List[str]] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     max_tokens: int = 4000
     temperature: float = 0.7
 
@@ -47,6 +47,14 @@ class Settings(BaseSettings):
 
     # Timeouts
     request_timeout: int = 120  # seconds
+
+    @field_validator('cors_origins', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS origins from comma-separated string or list."""
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(',')]
+        return v
 
     class Config:
         env_file = ".env"
