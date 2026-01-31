@@ -44,8 +44,8 @@ class Settings(BaseSettings):
 
     # Database Settings
     database_url: str = Field(
-        default="postgresql+asyncpg://llm_council:council_password@db:5432/llm_council_db",
-        description="Database connection URL"
+        default="postgresql://llm_council:council_password@db:5432/llm_council_db",
+        description="Database connection URL (use psycopg2 driver for sync)"
     )
     database_echo: bool = Field(default=False, description="Echo SQL queries")
     database_path: str = "./data/conversations.json"  # Legacy fallback

@@ -47,7 +47,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://llm_council:council_password@db:5432/llm_council_db
+      - DATABASE_URL=postgresql://llm_council:council_password@db:5432/llm_council_db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
@@ -75,7 +75,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://llm_council:council_password@db:5432/llm_council_db
+      - DATABASE_URL=postgresql://llm_council:council_password@db:5432/llm_council_db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
@@ -94,7 +94,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://llm_council:council_password@db:5432/llm_council_db
+      - DATABASE_URL=postgresql://llm_council:council_password@db:5432/llm_council_db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2

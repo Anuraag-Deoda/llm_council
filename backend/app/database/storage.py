@@ -2,6 +2,7 @@
 Backward-compatible storage wrapper for existing routes
 """
 import json
+import uuid
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
@@ -32,8 +33,11 @@ class ConversationStorage:
         with open(self.database_path, 'w') as f:
             json.dump(data, f, indent=2)
 
-    def create_conversation(self, conversation_id: str, initial_data: Optional[Dict] = None) -> Dict:
+    def create_conversation(self, conversation_id: Optional[str] = None, initial_data: Optional[Dict] = None) -> str:
         """Create a new conversation"""
+        if conversation_id is None:
+            conversation_id = str(uuid.uuid4())
+
         data = self._load_data()
         conversation = {
             "id": conversation_id,
@@ -42,7 +46,7 @@ class ConversationStorage:
         }
         data["conversations"][conversation_id] = conversation
         self._save_data(data)
-        return conversation
+        return conversation_id
 
     def get_conversation(self, conversation_id: str) -> Optional[Dict]:
         """Get a conversation by ID"""
