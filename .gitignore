@@ -1,0 +1,14 @@
+# General
+.DS_Store
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data
+data/
+*.db
