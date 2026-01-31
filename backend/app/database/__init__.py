@@ -22,6 +22,7 @@ from .session import (
     engine,
     SessionLocal,
 )
+from .storage import ConversationStorage
 
 __all__ = [
     # Models
@@ -44,4 +45,6 @@ __all__ = [
     "close_db",
     "engine",
     "SessionLocal",
+    # Legacy
+    "ConversationStorage",
 ]
