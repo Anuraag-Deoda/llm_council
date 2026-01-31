@@ -5,6 +5,7 @@ import { streamChat, streamIndividualChat, ModelInfo, fetchModels, ModelResponse
 import Sidebar, { Chat, ChatType } from './Sidebar';
 import MessageBubble from './MessageBubble';
 import StageIndicator, { Stage } from './StageIndicator';
+import CouncilSummaryCard from './CouncilSummaryCard';
 
 interface Message {
   id: string;
@@ -23,7 +24,16 @@ interface CouncilState {
     content: string;
     timestamp: number;
   }>;
+  reviews: Array<{
+    reviewer_model: string;
+    rankings: Array<{
+      model_id: string;
+      rank: number;
+      reasoning: string;
+    }>;
+  }>;
   isProcessing: boolean;
+  showSummary: boolean;
 }
 
 export default function NewChatInterface() {
@@ -46,7 +56,9 @@ export default function NewChatInterface() {
     stage: 'idle',
     stageMessage: '',
     responses: [],
+    reviews: [],
     isProcessing: false,
+    showSummary: false,
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -139,7 +151,9 @@ export default function NewChatInterface() {
       stage: 'idle',
       stageMessage: '',
       responses: [],
+      reviews: [],
       isProcessing: false,
+      showSummary: false,
     });
   };
 
@@ -155,7 +169,9 @@ export default function NewChatInterface() {
       stage: 'idle',
       stageMessage: '',
       responses: [],
+      reviews: [],
       isProcessing: false,
+      showSummary: false,
     });
   };
 
@@ -264,11 +280,17 @@ export default function NewChatInterface() {
       stage: 'first_opinions',
       stageMessage: 'Council members are thinking...',
       responses: [],
+      reviews: [],
       isProcessing: true,
+      showSummary: false,
     });
 
     let fullFinalResponse = '';
     const councilResponses: Array<{ modelId: string; content: string; timestamp: number }> = [];
+    const councilReviews: Array<{
+      reviewer_model: string;
+      rankings: Array<{ model_id: string; rank: number; reasoning: string }>;
+    }> = [];
 
     try {
       await streamChat(
@@ -318,7 +340,12 @@ export default function NewChatInterface() {
               break;
 
             case 'review':
-              // Reviews happen in background, just update stage
+              if (chunk.model_id && chunk.data) {
+                councilReviews.push({
+                  reviewer_model: chunk.model_id,
+                  rankings: chunk.data.rankings || [],
+                });
+              }
               break;
 
             case 'final_response':
@@ -351,7 +378,9 @@ export default function NewChatInterface() {
                 stage: 'complete',
                 stageMessage: '',
                 responses: councilResponses,
+                reviews: councilReviews,
                 isProcessing: false,
+                showSummary: councilReviews.length > 0,
               });
               break;
 
@@ -443,16 +472,26 @@ export default function NewChatInterface() {
                     </div>
                   </div>
                 ) : (
-                  messages.map((message) => (
-                    <MessageBubble
-                      key={message.id}
-                      content={message.content}
-                      sender={message.sender}
-                      isUser={message.isUser}
-                      timestamp={message.timestamp}
-                      modelId={message.modelId}
-                    />
-                  ))
+                  <>
+                    {messages.map((message) => (
+                      <MessageBubble
+                        key={message.id}
+                        content={message.content}
+                        sender={message.sender}
+                        isUser={message.isUser}
+                        timestamp={message.timestamp}
+                        modelId={message.modelId}
+                      />
+                    ))}
+
+                    {/* Council Summary Card */}
+                    {activeChatType === 'council' && councilState.showSummary && (
+                      <CouncilSummaryCard
+                        rankings={councilState.reviews}
+                        models={models}
+                      />
+                    )}
+                  </>
                 )}
                 <div ref={messagesEndRef} />
               </div>

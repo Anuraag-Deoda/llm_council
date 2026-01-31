@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -20,6 +20,8 @@ export default function MessageBubble({
   timestamp,
   modelId,
 }: MessageBubbleProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Get avatar emoji based on model
   const getAvatar = () => {
     if (isUser) return '👤';
@@ -28,48 +30,71 @@ export default function MessageBubble({
     if (modelId?.includes('claude')) return '🎭';
     if (modelId?.includes('deepseek')) return '🔍';
     if (modelId?.includes('gemini')) return '💎';
+    if (modelId?.includes('chairman')) return '👑';
     return '🤖';
   };
 
+  // Check if content is long
+  const isLongContent = content.length > 500;
+  const displayContent = isLongContent && !isExpanded ? content.substring(0, 500) + '...' : content;
+
   return (
-    <div className={`flex gap-2 mb-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex gap-3 mb-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-lg">
+        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-xl shadow-md">
           {getAvatar()}
         </div>
       )}
 
       {/* Message Container */}
-      <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-2xl`}>
+      <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-3xl min-w-[200px]`}>
         {/* Sender Name (for non-user messages) */}
         {!isUser && (
-          <div className="text-xs font-semibold text-gray-600 mb-1 px-3">
+          <div className="text-xs font-bold text-gray-700 mb-1 px-4">
             {sender}
           </div>
         )}
 
         {/* Message Bubble */}
         <div
-          className={`rounded-2xl px-4 py-2 ${
+          className={`rounded-2xl px-5 py-3 shadow-md ${
             isUser
-              ? 'bg-blue-600 text-white rounded-tr-sm'
-              : 'bg-gray-100 text-gray-900 rounded-tl-sm'
+              ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-tr-sm'
+              : modelId?.includes('chairman')
+              ? 'bg-gradient-to-br from-yellow-50 to-orange-50 text-gray-900 border-2 border-yellow-400 rounded-tl-sm'
+              : 'bg-white text-gray-900 border border-gray-200 rounded-tl-sm'
           }`}
         >
           {isUser ? (
-            <p className="whitespace-pre-wrap text-sm">{content}</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">{content}</p>
           ) : (
-            <div className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-800 prose-a:text-blue-600 prose-code:text-gray-900">
+            <div className={`prose prose-sm max-w-none ${
+              modelId?.includes('chairman')
+                ? 'prose-headings:text-gray-900 prose-p:text-gray-800 prose-strong:text-gray-900'
+                : 'prose-headings:text-gray-900 prose-p:text-gray-700'
+            } prose-a:text-blue-600 prose-code:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded`}>
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {content}
+                {displayContent}
               </ReactMarkdown>
             </div>
+          )}
+
+          {/* Expand/Collapse for long messages */}
+          {isLongContent && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className={`text-xs font-semibold mt-2 underline ${
+                isUser ? 'text-blue-100 hover:text-white' : 'text-blue-600 hover:text-blue-800'
+              }`}
+            >
+              {isExpanded ? 'Show less' : 'Read more'}
+            </button>
           )}
         </div>
 
         {/* Timestamp */}
-        <div className={`text-xs text-gray-400 mt-1 px-3`}>
+        <div className={`text-xs text-gray-400 mt-1 px-4`}>
           {new Date(timestamp).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -79,7 +104,7 @@ export default function MessageBubble({
 
       {/* User Avatar */}
       {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-lg">
+        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xl shadow-md">
           👤
         </div>
       )}
