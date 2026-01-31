@@ -4,7 +4,7 @@ Main FastAPI application for LLM Council.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
-from .routes import chat, models
+from .routes import chat, models, individual
 
 # Create FastAPI app
 app = FastAPI(
@@ -25,6 +25,7 @@ app.add_middleware(
 # Include routers
 app.include_router(chat.router)
 app.include_router(models.router)
+app.include_router(individual.router)
 
 
 @app.get("/")

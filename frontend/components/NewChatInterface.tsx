@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { streamChat, ModelInfo, fetchModels, ModelResponse, ReviewResponse, StreamChunk } from '@/lib/api';
+import { streamChat, streamIndividualChat, ModelInfo, fetchModels, ModelResponse, ReviewResponse, StreamChunk } from '@/lib/api';
 import Sidebar, { Chat, ChatType } from './Sidebar';
 import MessageBubble from './MessageBubble';
 import StageIndicator, { Stage } from './StageIndicator';
@@ -201,23 +201,62 @@ export default function NewChatInterface() {
   };
 
   const handleIndividualChat = async (userInput: string, currentMessages: Message[]) => {
-    // For individual chats, just send to that specific model
-    // We'll need to create an API endpoint for single model chats
-    // For now, let's simulate a response
+    if (!activeModelId) return;
+
     const modelName = models.find((m) => m.id === activeModelId)?.name || 'Model';
 
-    const assistantMessage: Message = {
-      id: Date.now().toString(),
-      content: `This is a response from ${modelName}. (Individual model chat not yet implemented - use Council for now)`,
-      sender: modelName,
-      isUser: false,
-      timestamp: Date.now(),
-      modelId: activeModelId || undefined,
-    };
+    // Build conversation history for context
+    const conversationHistory = currentMessages
+      .filter((msg) => msg.isUser || msg.modelId === activeModelId)
+      .map((msg) => ({
+        role: msg.isUser ? 'user' : 'assistant',
+        content: msg.content,
+      }));
 
-    const updatedMessages = [...currentMessages, assistantMessage];
-    setMessages(updatedMessages);
-    saveMessagesToStorage(activeChat!, updatedMessages);
+    let fullResponse = '';
+
+    try {
+      await streamIndividualChat(
+        activeModelId,
+        userInput,
+        conversationHistory,
+        (chunk) => {
+          if (chunk.type === 'content' && chunk.content) {
+            fullResponse += chunk.content;
+          } else if (chunk.type === 'complete') {
+            // Save the complete message
+            const assistantMessage: Message = {
+              id: Date.now().toString(),
+              content: fullResponse,
+              sender: modelName,
+              isUser: false,
+              timestamp: Date.now(),
+              modelId: activeModelId,
+            };
+
+            const updatedMessages = [...currentMessages, assistantMessage];
+            setMessages(updatedMessages);
+            saveMessagesToStorage(activeChat!, updatedMessages);
+            updateConversationLastMessage(activeChat!, fullResponse);
+          } else if (chunk.type === 'error') {
+            console.error('Individual chat error:', chunk.content);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Individual chat error:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: 'Sorry, an error occurred. Please try again.',
+        sender: modelName,
+        isUser: false,
+        timestamp: Date.now(),
+        modelId: activeModelId,
+      };
+      const updatedMessages = [...currentMessages, errorMessage];
+      setMessages(updatedMessages);
+      saveMessagesToStorage(activeChat!, updatedMessages);
+    }
   };
 
   const handleCouncilChat = async (userInput: string, currentMessages: Message[]) => {

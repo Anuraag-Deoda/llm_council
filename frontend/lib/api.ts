@@ -172,3 +172,66 @@ export async function deleteConversation(conversationId: string): Promise<void> 
     throw new Error('Failed to delete conversation');
   }
 }
+
+/**
+ * Stream a chat response from a single model.
+ *
+ * @param modelId - The model to chat with
+ * @param message - The user's message
+ * @param conversationHistory - Optional conversation history
+ * @param onChunk - Callback for each streamed chunk
+ */
+export async function streamIndividualChat(
+  modelId: string,
+  message: string,
+  conversationHistory: Array<{ role: string; content: string }> | null,
+  onChunk: (chunk: { type: string; content?: string }) => void
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/individual/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model_id: modelId,
+      message,
+      conversation_history: conversationHistory,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to stream individual chat response');
+  }
+
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+
+  if (!reader) {
+    throw new Error('No reader available');
+  }
+
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // Split by newlines to process complete JSON chunks
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+    for (const line of lines) {
+      if (line.trim()) {
+        try {
+          const chunk = JSON.parse(line);
+          onChunk(chunk);
+        } catch (e) {
+          console.error('Failed to parse chunk:', line, e);
+        }
+      }
+    }
+  }
+}
