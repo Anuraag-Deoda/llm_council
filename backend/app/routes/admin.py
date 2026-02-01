@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 
 from app.database import get_db
 from app.database.repositories import ModelRepository, ConfigurationRepository, AnalyticsRepository
-from app.database.models import ModelInfo, CouncilConfiguration
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -16,6 +15,42 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # ============================================================================
 # Request/Response Models
 # ============================================================================
+
+class ModelResponse(BaseModel):
+    id: str
+    name: str
+    provider: str
+    is_active: bool
+    is_chairman: bool
+    max_tokens: Optional[int]
+    temperature: float
+    cost_per_1k_input_tokens: float
+    cost_per_1k_output_tokens: float
+    capabilities: List[str]
+    total_requests: int
+    total_errors: int
+    avg_latency_ms: float
+
+    class Config:
+        from_attributes = True
+
+
+class CouncilConfigResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    is_active: bool
+    is_default: bool
+    voting_system: str
+    min_models: int
+    max_models: Optional[int]
+    chairman_model_id: Optional[str]
+    enable_peer_review: bool
+    peer_review_anonymous: bool
+
+    class Config:
+        from_attributes = True
+
 
 class ModelCreate(BaseModel):
     id: str
@@ -77,12 +112,13 @@ class SystemStats(BaseModel):
 # Model Management Endpoints
 # ============================================================================
 
-@router.get("/models", response_model=List[ModelInfo])
+@router.get("/models", response_model=List[ModelResponse])
 def list_models(
     active_only: bool = False,
     db: Session = Depends(get_db)
 ):
     """List all models in the system"""
+    from app.database.models import ModelInfo
     repo = ModelRepository(db)
 
     if active_only:
@@ -93,7 +129,7 @@ def list_models(
     return models
 
 
-@router.post("/models", response_model=ModelInfo, status_code=status.HTTP_201_CREATED)
+@router.post("/models", response_model=ModelResponse, status_code=status.HTTP_201_CREATED)
 def create_model(
     model_data: ModelCreate,
     db: Session = Depends(get_db)
@@ -113,7 +149,7 @@ def create_model(
     return model
 
 
-@router.get("/models/{model_id}", response_model=ModelInfo)
+@router.get("/models/{model_id}", response_model=ModelResponse)
 def get_model(
     model_id: str,
     db: Session = Depends(get_db)
@@ -131,7 +167,7 @@ def get_model(
     return model
 
 
-@router.patch("/models/{model_id}", response_model=ModelInfo)
+@router.patch("/models/{model_id}", response_model=ModelResponse)
 def update_model(
     model_id: str,
     model_update: ModelUpdate,
@@ -175,14 +211,14 @@ def delete_model(
 # Council Configuration Endpoints
 # ============================================================================
 
-@router.get("/configs", response_model=List[CouncilConfiguration])
+@router.get("/configs", response_model=List[CouncilConfigResponse])
 def list_configurations(db: Session = Depends(get_db)):
     """List all council configurations"""
     repo = ConfigurationRepository(db)
     return repo.get_all()
 
 
-@router.post("/configs", response_model=CouncilConfiguration, status_code=status.HTTP_201_CREATED)
+@router.post("/configs", response_model=CouncilConfigResponse, status_code=status.HTTP_201_CREATED)
 def create_configuration(
     config_data: CouncilConfigCreate,
     db: Session = Depends(get_db)
@@ -202,7 +238,7 @@ def create_configuration(
     return config
 
 
-@router.get("/configs/{config_id}", response_model=CouncilConfiguration)
+@router.get("/configs/{config_id}", response_model=CouncilConfigResponse)
 def get_configuration(
     config_id: int,
     db: Session = Depends(get_db)
@@ -220,7 +256,7 @@ def get_configuration(
     return config
 
 
-@router.patch("/configs/{config_id}", response_model=CouncilConfiguration)
+@router.patch("/configs/{config_id}", response_model=CouncilConfigResponse)
 def update_configuration(
     config_id: int,
     config_update: CouncilConfigUpdate,
@@ -248,7 +284,7 @@ def update_configuration(
     return config
 
 
-@router.post("/configs/{config_id}/activate", response_model=CouncilConfiguration)
+@router.post("/configs/{config_id}/activate", response_model=CouncilConfigResponse)
 def activate_configuration(
     config_id: int,
     db: Session = Depends(get_db)
