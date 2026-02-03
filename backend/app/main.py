@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routes import chat, models, individual, admin, analytics, health, export
+from .routes import chat, models, individual, admin, analytics, health, export, rag, auth
 from .database import init_db, close_db
 from .core.redis_client import redis_client
 from .core.metrics import init_metrics, metrics_endpoint
@@ -111,6 +111,12 @@ app.include_router(analytics.router)
 app.include_router(health.router)
 app.include_router(export.router)
 
+# RAG (Retrieval-Augmented Generation)
+app.include_router(rag.router)
+
+# Authentication
+app.include_router(auth.router)
+
 
 # ============================================================================
 # Root Endpoints
@@ -136,7 +142,8 @@ async def root():
             "health": "/health/detailed",
             "metrics": "/metrics",
             "admin": "/admin",
-            "analytics": "/analytics"
+            "analytics": "/analytics",
+            "rag": "/rag"
         }
     }
 

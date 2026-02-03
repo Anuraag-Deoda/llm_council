@@ -113,6 +113,55 @@ class Settings(BaseSettings):
     require_api_key: bool = Field(default=False, description="Require API key for requests")
     allowed_api_keys: List[str] = Field(default=[], description="List of valid API keys")
 
+    # JWT Settings
+    jwt_secret_key: str = Field(default="change-this-in-production-use-a-long-random-string", description="Secret key for JWT encoding")
+    jwt_algorithm: str = Field(default="HS256", description="JWT encoding algorithm")
+    jwt_access_token_expire_minutes: int = Field(default=30, description="Access token expiration in minutes")
+    jwt_refresh_token_expire_days: int = Field(default=7, description="Refresh token expiration in days")
+
+    # Email Settings (Gmail SMTP)
+    smtp_host: str = Field(default="smtp.gmail.com", description="SMTP server host")
+    smtp_port: int = Field(default=587, description="SMTP server port")
+    smtp_username: str = Field(default="", description="SMTP username (Gmail address)")
+    smtp_password: str = Field(default="", description="SMTP password (Gmail app password)")
+    smtp_from_email: str = Field(default="", description="From email address")
+    magic_link_expire_minutes: int = Field(default=15, description="Magic link expiration in minutes")
+    frontend_url: str = Field(default="http://localhost:3000", description="Frontend URL for email links")
+
+    # RAG Core Settings
+    enable_rag: bool = Field(default=True, description="Enable RAG functionality")
+    rag_embedding_model: str = Field(default="text-embedding-3-small", description="OpenAI embedding model")
+    rag_embedding_dimensions: int = Field(default=1536, description="Embedding vector dimensions")
+    rag_chunk_size: int = Field(default=512, description="Target chunk size in tokens")
+    rag_chunk_overlap: int = Field(default=50, description="Overlap between chunks in tokens")
+    rag_top_k: int = Field(default=10, description="Number of chunks to retrieve")
+    rag_similarity_threshold: float = Field(default=0.5, description="Minimum similarity score")
+
+    # RAG Conflict Detection
+    rag_conflict_threshold: float = Field(default=0.6, description="Minimum confidence to report conflict")
+    rag_conflict_check_top_n: int = Field(default=5, description="Number of top chunks to check for conflicts")
+    rag_conflict_model: str = Field(default="gpt-4o", description="Model for conflict detection")
+
+    # RAG Trust Weights (scoring algorithm)
+    rag_weight_similarity: float = Field(default=0.4, description="Weight for similarity score")
+    rag_weight_source_trust: float = Field(default=0.3, description="Weight for source trust score")
+    rag_weight_recency: float = Field(default=0.2, description="Weight for recency score")
+    rag_weight_author_authority: float = Field(default=0.1, description="Weight for author authority score")
+
+    # RAG Default Source Trust Scores
+    rag_trust_weight_document: float = Field(default=0.8, description="Default trust for uploaded documents")
+    rag_trust_weight_notion: float = Field(default=0.7, description="Default trust for Notion sources")
+    rag_trust_weight_github: float = Field(default=0.6, description="Default trust for GitHub sources")
+    rag_trust_weight_slack: float = Field(default=0.5, description="Default trust for Slack sources")
+
+    # RAG File Upload
+    rag_max_file_size_mb: int = Field(default=50, description="Maximum file size in MB")
+    rag_allowed_file_types: List[str] = Field(
+        default=["pdf", "docx", "doc", "txt", "md", "markdown"],
+        description="Allowed file types for upload"
+    )
+    rag_upload_dir: str = Field(default="./data/rag_uploads", description="Directory for uploaded files")
+
     @field_validator('cors_origins', mode='before')
     @classmethod
     def parse_cors_origins(cls, v):
@@ -127,6 +176,14 @@ class Settings(BaseSettings):
         """Parse API keys from comma-separated string or list."""
         if isinstance(v, str):
             return [key.strip() for key in v.split(',') if key.strip()]
+        return v
+
+    @field_validator('rag_allowed_file_types', mode='before')
+    @classmethod
+    def parse_file_types(cls, v):
+        """Parse allowed file types from comma-separated string or list."""
+        if isinstance(v, str):
+            return [ft.strip().lower() for ft in v.split(',') if ft.strip()]
         return v
 
     class Config:

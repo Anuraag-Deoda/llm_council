@@ -39,7 +39,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(String(100), primary_key=True, index=True)
-    user_id = Column(String(100), index=True, nullable=True)  # For multi-user support
+    user_id = Column(String(100), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
     type = Column(SQLEnum(ChatType), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     status = Column(SQLEnum(ConversationStatus), default=ConversationStatus.ACTIVE, index=True)
@@ -61,6 +61,7 @@ class Conversation(Base):
     # Relationships
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
     analytics = relationship("ConversationAnalytics", back_populates="conversation", cascade="all, delete-orphan")
+    user = relationship("User", back_populates="conversations", foreign_keys=[user_id])
 
     # Indexes
     __table_args__ = (

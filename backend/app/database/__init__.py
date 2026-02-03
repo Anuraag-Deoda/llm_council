@@ -15,6 +15,21 @@ from .models import (
     MessageRole,
     ConversationStatus,
 )
+from .rag_models import (
+    DocumentSource,
+    Document,
+    DocumentChunk,
+    ConflictRecord,
+    RetrievalLog,
+    SourceType,
+    DocumentStatus,
+    ConflictType,
+    ConflictStatus,
+)
+from .auth_models import (
+    User,
+    MagicLinkToken,
+)
 from .session import (
     get_db,
     init_db,
@@ -39,6 +54,20 @@ __all__ = [
     "ChatType",
     "MessageRole",
     "ConversationStatus",
+    # RAG Models
+    "DocumentSource",
+    "Document",
+    "DocumentChunk",
+    "ConflictRecord",
+    "RetrievalLog",
+    # RAG Enums
+    "SourceType",
+    "DocumentStatus",
+    "ConflictType",
+    "ConflictStatus",
+    # Auth Models
+    "User",
+    "MagicLinkToken",
     # Session
     "get_db",
     "init_db",
