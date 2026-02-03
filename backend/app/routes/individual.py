@@ -16,6 +16,8 @@ llm_service = LLMService()
 
 class IndividualChatRequest(BaseModel):
     """Request for individual model chat."""
+    model_config = {"protected_namespaces": ()}
+
     model_id: str
     message: str
     conversation_history: Optional[list] = None  # List of {role, content}

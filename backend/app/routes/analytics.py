@@ -33,6 +33,8 @@ class ConversationInsight(BaseModel):
 
 
 class ModelPerformance(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     model_id: str
     model_name: str
     total_requests: int
@@ -51,6 +53,8 @@ class TrendData(BaseModel):
 
 
 class LeaderboardEntry(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     rank: int
     model_id: str
     model_name: str

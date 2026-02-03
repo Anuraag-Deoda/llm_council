@@ -1,11 +1,13 @@
 """
 Chat endpoints for the LLM Council.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
 from ..models import ChatRequest, CouncilResponse
 from ..services.council_orchestrator import CouncilOrchestrator
-from ..database import ConversationStorage
+from ..database import ConversationStorage, get_db
 from ..config import settings
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -16,11 +18,14 @@ storage = ConversationStorage(settings.database_path)
 
 
 @router.post("/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(request: ChatRequest, db: Session = Depends(get_db)):
     """
     Stream a council response to a user query.
 
     Returns a streaming response with JSON-encoded chunks.
+
+    When use_rag=true, the query is augmented with relevant context from
+    the knowledge base and conflicts are detected and reported.
     """
     try:
         # Create or get conversation
@@ -35,28 +40,55 @@ async def chat_stream(request: ChatRequest):
         # Add user message to history
         storage.add_message(conversation_id, "user", request.message)
 
+        # Determine if we should use RAG
+        use_rag = request.use_rag and settings.enable_rag
+
         # Stream the council response
         async def generate():
             final_response_parts = []
 
-            async for chunk in orchestrator.run_council(
-                user_query=request.message,
-                conversation_id=conversation_id,
-                selected_models=request.selected_models,
-                stream=True,
-            ):
-                yield chunk
+            if use_rag:
+                # Use RAG-enabled council
+                async for chunk in orchestrator.run_council_with_rag(
+                    db=db,
+                    user_query=request.message,
+                    conversation_id=conversation_id,
+                    selected_models=request.selected_models,
+                    source_ids=request.rag_source_ids,
+                    stream=True,
+                ):
+                    yield chunk
 
-                # Collect final response parts
-                import json
-                try:
-                    chunk_data = json.loads(chunk.strip())
-                    if chunk_data.get("type") == "final_response":
-                        content = chunk_data.get("content", "")
-                        if content:
-                            final_response_parts.append(content)
-                except json.JSONDecodeError:
-                    pass
+                    # Collect final response parts
+                    import json
+                    try:
+                        chunk_data = json.loads(chunk.strip())
+                        if chunk_data.get("type") == "final_response":
+                            content = chunk_data.get("content", "")
+                            if content:
+                                final_response_parts.append(content)
+                    except json.JSONDecodeError:
+                        pass
+            else:
+                # Standard council (no RAG)
+                async for chunk in orchestrator.run_council(
+                    user_query=request.message,
+                    conversation_id=conversation_id,
+                    selected_models=request.selected_models,
+                    stream=True,
+                ):
+                    yield chunk
+
+                    # Collect final response parts
+                    import json
+                    try:
+                        chunk_data = json.loads(chunk.strip())
+                        if chunk_data.get("type") == "final_response":
+                            content = chunk_data.get("content", "")
+                            if content:
+                                final_response_parts.append(content)
+                    except json.JSONDecodeError:
+                        pass
 
             # After streaming completes, save the final response to history
             if final_response_parts:
@@ -69,6 +101,7 @@ async def chat_stream(request: ChatRequest):
             headers={
                 "Cache-Control": "no-cache",
                 "X-Conversation-ID": conversation_id,
+                "X-RAG-Enabled": str(use_rag).lower(),
             },
         )
 

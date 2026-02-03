@@ -3,7 +3,7 @@ Backward-compatible storage wrapper for existing routes
 """
 import json
 import uuid
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 
 
@@ -53,12 +53,37 @@ class ConversationStorage:
         data = self._load_data()
         return data["conversations"].get(conversation_id)
 
-    def add_message(self, conversation_id: str, message: Dict) -> None:
+    def add_message(self, conversation_id: str, role: str, content: str) -> None:
         """Add a message to a conversation"""
         data = self._load_data()
         if conversation_id in data["conversations"]:
+            message = {"role": role, "content": content}
             data["conversations"][conversation_id]["messages"].append(message)
             self._save_data(data)
+
+    def add_council_response(self, conversation_id: str, response: Any) -> None:
+        """Add a council response to a conversation"""
+        data = self._load_data()
+        if conversation_id in data["conversations"]:
+            if "council_responses" not in data["conversations"][conversation_id]:
+                data["conversations"][conversation_id]["council_responses"] = []
+            # Convert Pydantic model to dict if needed
+            response_data = response.model_dump() if hasattr(response, 'model_dump') else response
+            data["conversations"][conversation_id]["council_responses"].append(response_data)
+            self._save_data(data)
+
+    def list_conversations(self) -> List[Dict]:
+        """List all conversations (alias for get_all_conversations)"""
+        return self.get_all_conversations()
+
+    def delete_conversation(self, conversation_id: str) -> bool:
+        """Delete a conversation by ID"""
+        data = self._load_data()
+        if conversation_id in data["conversations"]:
+            del data["conversations"][conversation_id]
+            self._save_data(data)
+            return True
+        return False
 
     def get_all_conversations(self) -> List[Dict]:
         """Get all conversations"""

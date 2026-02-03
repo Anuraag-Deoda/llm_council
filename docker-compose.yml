@@ -1,7 +1,7 @@
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database with pgvector extension for RAG
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: llm_council_db
     environment:
       POSTGRES_USER: llm_council
@@ -10,6 +10,7 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./backend/scripts/init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql:ro
     ports:
       - "5432:5432"
     healthcheck:

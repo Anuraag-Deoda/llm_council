@@ -1,12 +1,15 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { streamChat, ModelResponse, ReviewResponse, StreamChunk } from '@/lib/api';
 import MessageList, { Message } from './MessageList';
 import StageIndicator, { Stage } from './StageIndicator';
 import TabView from './TabView';
 import ModelSelector from './ModelSelector';
 import CouncilDeliberation from './CouncilDeliberation';
+import RAGContext, { RAGContextData } from './rag/RAGContext';
+import ConflictAlert, { ConflictData } from './rag/ConflictAlert';
 
 // Extended message type with council data
 export interface CouncilMessage extends Message {
@@ -22,6 +25,11 @@ export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
+
+  // RAG state
+  const [useRAG, setUseRAG] = useState(false);
+  const [ragContext, setRAGContext] = useState<RAGContextData | null>(null);
+  const [conflicts, setConflicts] = useState<ConflictData | null>(null);
 
   // Council state (current deliberation)
   const [currentStage, setCurrentStage] = useState<Stage>('idle');
@@ -47,6 +55,8 @@ export default function ChatInterface() {
     setFirstOpinions([]);
     setReviews([]);
     setFinalResponse('');
+    setRAGContext(null);
+    setConflicts(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,7 +83,9 @@ export default function ChatInterface() {
         userMessage.content,
         conversationId,
         selectedModels.length > 0 ? selectedModels : null,
-        handleStreamChunk
+        handleStreamChunk,
+        useRAG,
+        null // RAG source IDs - could be made configurable
       );
 
       if (newConversationId && !conversationId) {
@@ -168,6 +180,18 @@ export default function ChatInterface() {
         setCurrentStage('complete');
         break;
 
+      case 'rag_context':
+        if (chunk.data) {
+          setRAGContext(chunk.data as RAGContextData);
+        }
+        break;
+
+      case 'conflict_detected':
+        if (chunk.data) {
+          setConflicts(chunk.data as ConflictData);
+        }
+        break;
+
       case 'error':
         console.error('Stream error:', chunk.content);
         break;
@@ -199,12 +223,37 @@ export default function ChatInterface() {
               Collective intelligence from multiple AI models
             </p>
           </div>
-          <button
-            onClick={startNewConversation}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            New Conversation
-          </button>
+          <div className="flex items-center space-x-4">
+            {/* RAG Toggle */}
+            <div className="flex items-center space-x-2">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useRAG}
+                  onChange={(e) => setUseRAG(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+              <span className="text-sm text-gray-700">Knowledge Base</span>
+            </div>
+
+            {/* Knowledge Base Link */}
+            <Link
+              href="/knowledge-base"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Manage KB
+            </Link>
+
+            {/* New Conversation */}
+            <button
+              onClick={startNewConversation}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              New Conversation
+            </button>
+          </div>
         </div>
       </header>
 
@@ -235,6 +284,14 @@ export default function ChatInterface() {
           {loading && (
             <div className="mt-6 p-6 bg-white rounded-lg shadow-sm border border-gray-200">
               <StageIndicator currentStage={currentStage} stageMessage={stageMessage} />
+
+              {/* RAG Context */}
+              {ragContext && <RAGContext data={ragContext} />}
+
+              {/* Conflict Alert */}
+              {conflicts && conflicts.conflicts.length > 0 && (
+                <ConflictAlert data={conflicts} />
+              )}
 
               {/* First Opinions Tab View */}
               {firstOpinions.length > 0 && (
@@ -304,8 +361,14 @@ export default function ChatInterface() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask the LLM Council a question..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              placeholder={useRAG
+                ? "Ask the LLM Council a question (Knowledge Base enabled)..."
+                : "Ask the LLM Council a question..."}
+              className={`flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 resize-none ${
+                useRAG
+                  ? 'border-purple-300 focus:ring-purple-500 bg-purple-50'
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
               rows={3}
               disabled={loading}
             />

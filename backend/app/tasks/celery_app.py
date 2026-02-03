@@ -11,7 +11,7 @@ celery_app = Celery(
     "llm_council",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.tasks.scheduled_tasks"]
+    include=["app.tasks.scheduled_tasks", "app.tasks.rag_tasks"]
 )
 
 # Celery configuration
@@ -53,6 +53,16 @@ celery_app.conf.update(
         "health-check-models": {
             "task": "app.tasks.scheduled_tasks.health_check_models",
             "schedule": crontab(minute="*/5"),  # Every 5 minutes
+        },
+        # RAG: Sync all sources every 6 hours
+        "rag-sync-all-sources": {
+            "task": "app.tasks.rag_tasks.sync_all_sources_task",
+            "schedule": crontab(minute=0, hour="*/6"),  # Every 6 hours
+        },
+        # RAG: Cleanup orphan embeddings daily at 3:30 AM
+        "rag-cleanup-orphans": {
+            "task": "app.tasks.rag_tasks.cleanup_orphan_embeddings_task",
+            "schedule": crontab(minute=30, hour=3),  # Daily at 3:30 AM
         },
     },
 )
