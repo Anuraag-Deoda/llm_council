@@ -1,179 +1,155 @@
 'use client';
 
-import { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import Link from 'next/link';
 
 export default function ProfileCard() {
-  const { user, updateProfile } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(user?.display_name || '');
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-
-  const handleSave = async () => {
-    setError(null);
-    setSuccess(false);
-    setIsLoading(true);
-
-    try {
-      await updateProfile({
-        display_name: displayName || undefined,
-        avatar_url: avatarUrl || undefined,
-      });
-      setSuccess(true);
-      setIsEditing(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setDisplayName(user?.display_name || '');
-    setAvatarUrl(user?.avatar_url || '');
-    setIsEditing(false);
-    setError(null);
-  };
-
-  if (!user) return null;
+  const { user } = useAuth();
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      {/* Cover */}
-      <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: 'var(--color-bg-secondary)',
+        border: '1px solid var(--color-border)'
+      }}
+    >
+      {/* Header Background */}
+      <div
+        className="h-24 relative"
+        style={{
+          background: 'var(--gradient-accent)',
+        }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%)'
+          }}
+        />
+      </div>
 
-      {/* Profile content */}
-      <div className="relative px-6 pb-6">
-        {/* Avatar */}
-        <div className="absolute -top-12 left-6">
-          {user.avatar_url ? (
-            <img
-              src={user.avatar_url}
-              alt={user.display_name || user.email}
-              className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover"
-            />
-          ) : (
-            <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <span className="text-white text-3xl font-bold">
-                {(user.display_name || user.email)[0].toUpperCase()}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Edit button */}
-        <div className="flex justify-end pt-4">
-          {!isEditing ? (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Edit Profile
-            </button>
-          ) : (
-            <div className="flex space-x-2">
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={isLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {isLoading ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Profile info */}
-        <div className="mt-8">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-600">Profile updated successfully!</p>
-            </div>
-          )}
-
-          {isEditing ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Your name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Avatar URL
-                </label>
-                <input
-                  type="url"
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="https://example.com/avatar.jpg"
-                />
-              </div>
-            </div>
-          ) : (
-            <>
-              <h2 className="text-2xl font-bold text-gray-900">
-                {user.display_name || 'No name set'}
-              </h2>
-              <p className="text-gray-600">{user.email}</p>
-            </>
-          )}
-        </div>
-
-        {/* Stats */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {user.email_verified ? (
-                  <span className="text-green-600">✓</span>
-                ) : (
-                  <span className="text-yellow-600">!</span>
-                )}
-              </p>
-              <p className="text-sm text-gray-500">
-                {user.email_verified ? 'Verified' : 'Unverified'}
-              </p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {user.has_password ? '✓' : '✗'}
-              </p>
-              <p className="text-sm text-gray-500">Password Set</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {new Date(user.created_at).toLocaleDateString('en-US', {
-                  month: 'short',
-                  year: 'numeric',
-                })}
-              </p>
-              <p className="text-sm text-gray-500">Joined</p>
-            </div>
+      {/* Avatar */}
+      <div className="px-6 -mt-12 relative z-10">
+        {user?.avatar_url ? (
+          <img
+            src={user.avatar_url}
+            alt={user.display_name || 'Profile'}
+            className="w-24 h-24 rounded-2xl object-cover"
+            style={{
+              border: '4px solid var(--color-bg-secondary)',
+              boxShadow: 'var(--shadow-lg)'
+            }}
+          />
+        ) : (
+          <div
+            className="w-24 h-24 rounded-2xl flex items-center justify-center"
+            style={{
+              background: 'var(--gradient-accent)',
+              border: '4px solid var(--color-bg-secondary)',
+              boxShadow: 'var(--shadow-lg)'
+            }}
+          >
+            <span className="text-3xl font-bold" style={{ color: 'var(--color-bg-primary)' }}>
+              {(user?.display_name || user?.email || '?')[0].toUpperCase()}
+            </span>
           </div>
+        )}
+      </div>
+
+      {/* User Info */}
+      <div className="p-6 pt-4">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            {user?.display_name || 'User'}
+          </h2>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {user?.email}
+          </p>
+        </div>
+
+        {/* Status Badges */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <span
+            className="px-3 py-1 rounded-full text-xs font-medium"
+            style={{
+              background: user?.email_verified ? 'var(--color-success-muted)' : 'var(--color-secondary-muted)',
+              color: user?.email_verified ? 'var(--color-success)' : 'var(--color-secondary)'
+            }}
+          >
+            {user?.email_verified ? 'Verified' : 'Unverified'}
+          </span>
+          {user?.has_password && (
+            <span
+              className="px-3 py-1 rounded-full text-xs font-medium"
+              style={{
+                background: 'var(--color-accent-muted)',
+                color: 'var(--color-accent)'
+              }}
+            >
+              Password Set
+            </span>
+          )}
+        </div>
+
+        {/* Account Details */}
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Member since</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+              {user?.created_at
+                ? new Date(user.created_at).toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })
+                : '--'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between py-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Last login</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+              {user?.last_login_at
+                ? new Date(user.last_login_at).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                  })
+                : '--'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Account status</span>
+            <span
+              className="text-sm font-medium flex items-center gap-1.5"
+              style={{ color: user?.is_active ? 'var(--color-success)' : 'var(--color-error)' }}
+            >
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ background: user?.is_active ? 'var(--color-success)' : 'var(--color-error)' }}
+              />
+              {user?.is_active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          <Link
+            href="/settings"
+            className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200"
+            style={{
+              background: 'var(--gradient-accent)',
+              color: 'var(--color-bg-primary)',
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Manage Settings
+          </Link>
         </div>
       </div>
     </div>

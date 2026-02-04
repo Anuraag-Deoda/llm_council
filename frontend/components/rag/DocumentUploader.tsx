@@ -40,7 +40,6 @@ export default function DocumentUploader({
       setError(`Unsupported file type. Allowed: ${allowedTypes.join(', ')}`);
       return false;
     }
-    // 50MB limit
     if (file.size > 50 * 1024 * 1024) {
       setError('File too large. Maximum size: 50MB');
       return false;
@@ -83,7 +82,6 @@ export default function DocumentUploader({
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
 
-    // Upload files one by one
     for (const file of files) {
       await uploadFile(file);
     }
@@ -97,7 +95,6 @@ export default function DocumentUploader({
       await uploadFile(file);
     }
 
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -107,13 +104,25 @@ export default function DocumentUploader({
     <div className="space-y-4">
       {/* Source selector */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          className="block text-sm font-medium mb-2"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
           Upload to Source
         </label>
         <select
           value={selectedSourceId || ''}
           onChange={(e) => onSourceChange(Number(e.target.value))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-3 rounded-xl text-sm appearance-none cursor-pointer"
+          style={{
+            background: 'var(--color-bg-tertiary)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-primary)',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23606070'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 12px center',
+            backgroundSize: '20px',
+          }}
         >
           <option value="">Select a source...</option>
           {sources.filter(s => s.is_active).map((source) => (
@@ -130,14 +139,13 @@ export default function DocumentUploader({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-          ${isDragging
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-          }
-          ${!selectedSourceId ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
+        className="relative rounded-xl p-8 text-center cursor-pointer transition-all duration-200"
+        style={{
+          background: isDragging ? 'var(--color-accent-muted)' : 'var(--color-bg-tertiary)',
+          border: `2px dashed ${isDragging ? 'var(--color-accent)' : 'var(--color-border)'}`,
+          opacity: !selectedSourceId ? 0.5 : 1,
+          cursor: !selectedSourceId ? 'not-allowed' : 'pointer',
+        }}
       >
         <input
           ref={fileInputRef}
@@ -150,29 +158,43 @@ export default function DocumentUploader({
         />
 
         {uploading ? (
-          <div className="flex flex-col items-center space-y-2">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            <p className="text-sm text-gray-600">{uploadProgress}</p>
+          <div className="flex flex-col items-center space-y-3">
+            <div
+              className="w-10 h-10 rounded-full animate-spin"
+              style={{
+                border: '3px solid var(--color-bg-secondary)',
+                borderTopColor: 'var(--color-accent)'
+              }}
+            />
+            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              {uploadProgress}
+            </p>
           </div>
         ) : (
           <>
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              stroke="currentColor"
-              fill="none"
-              viewBox="0 0 48 48"
+            <div
+              className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+              style={{ background: 'var(--color-accent-muted)' }}
             >
-              <path
-                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="mt-2 text-sm text-gray-600">
-              <span className="font-medium text-blue-600">Click to upload</span> or drag and drop
+              <svg
+                className="w-7 h-7"
+                style={{ color: 'var(--color-accent)' }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+            </div>
+            <p className="text-sm mb-1" style={{ color: 'var(--color-text-primary)' }}>
+              <span style={{ color: 'var(--color-accent)' }}>Click to upload</span> or drag and drop
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
               PDF, DOCX, TXT, MD up to 50MB
             </p>
           </>
@@ -181,15 +203,45 @@ export default function DocumentUploader({
 
       {/* Error message */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{error}</p>
+        <div
+          className="p-4 rounded-xl flex items-start gap-3"
+          style={{
+            background: 'var(--color-error-muted)',
+            border: '1px solid rgba(255, 68, 102, 0.2)'
+          }}
+        >
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            style={{ color: 'var(--color-error)' }}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm" style={{ color: 'var(--color-error)' }}>{error}</p>
         </div>
       )}
 
       {/* Success message */}
       {uploadProgress && !uploading && (
-        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-600">{uploadProgress}</p>
+        <div
+          className="p-4 rounded-xl flex items-start gap-3"
+          style={{
+            background: 'var(--color-success-muted)',
+            border: '1px solid rgba(0, 255, 136, 0.2)'
+          }}
+        >
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            style={{ color: 'var(--color-success)' }}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <p className="text-sm" style={{ color: 'var(--color-success)' }}>{uploadProgress}</p>
         </div>
       )}
     </div>

@@ -4,6 +4,15 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export interface ModelContext {
+  preferred_name?: string;
+  role?: string;
+  expertise?: string[];
+  communication_style?: string;
+  technical_level?: string;
+  custom_instructions?: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -11,6 +20,7 @@ export interface User {
   display_name: string | null;
   avatar_url: string | null;
   preferences: Record<string, any>;
+  model_context: ModelContext;
   is_active: boolean;
   has_password: boolean;
   created_at: string;
@@ -45,6 +55,7 @@ export interface UpdateProfileData {
   display_name?: string;
   avatar_url?: string;
   preferences?: Record<string, any>;
+  model_context?: ModelContext;
 }
 
 /**
