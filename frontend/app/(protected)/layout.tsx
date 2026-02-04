@@ -21,8 +21,22 @@ export default function ProtectedLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: 'var(--color-bg-primary)' }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div
+            className="w-12 h-12 rounded-full animate-spin"
+            style={{
+              border: '3px solid var(--color-bg-tertiary)',
+              borderTopColor: 'var(--color-accent)'
+            }}
+          />
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            Loading...
+          </p>
+        </div>
       </div>
     );
   }
@@ -32,9 +46,50 @@ export default function ProtectedLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
+    <div className="flex h-screen" style={{ background: 'var(--color-bg-primary)' }}>
+      {/* Sidebar */}
+      <aside
+        className="flex-shrink-0 hidden md:block border-r"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+        <Sidebar />
+      </aside>
+
+      {/* Mobile Header */}
+      <div
+        className="fixed top-0 left-0 right-0 z-50 md:hidden p-4 border-b bg-glass"
+        style={{ borderColor: 'var(--color-border)' }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--gradient-accent)' }}
+            >
+              <svg className="w-4 h-4" style={{ color: 'var(--color-bg-primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              LLM Council
+            </span>
+          </div>
+          <button
+            className="p-2 rounded-lg"
+            style={{
+              background: 'var(--color-bg-tertiary)',
+              color: 'var(--color-text-secondary)'
+            }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto md:pt-0 pt-16">
         {children}
       </main>
     </div>
