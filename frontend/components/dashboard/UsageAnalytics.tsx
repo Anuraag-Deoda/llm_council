@@ -1,196 +1,160 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from 'recharts';
-import { fetchUsageTrends, fetchCostTrends, TrendData } from '@/lib/api';
-
-type ChartType = 'usage' | 'cost';
-
-interface ChartData {
-  date: string;
-  value: number;
-  label: string;
-}
+import { fetchUsageTrends, UsageTrend } from '@/lib/api';
 
 export default function UsageAnalytics() {
-  const [activeChart, setActiveChart] = useState<ChartType>('usage');
-  const [usageData, setUsageData] = useState<ChartData[]>([]);
-  const [costData, setCostData] = useState<ChartData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [days, setDays] = useState(7);
+  const [data, setData] = useState<UsageTrend[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('7d');
 
   useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
+    const loadData = async () => {
+      setLoading(true);
       try {
-        const [usage, cost] = await Promise.all([
-          fetchUsageTrends(days).catch(() => ({ trends: [] })),
-          fetchCostTrends(days).catch(() => ({ trends: [] })),
-        ]);
-
-        setUsageData(
-          usage.trends.map((t: TrendData) => ({
-            date: new Date(t.timestamp).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            }),
-            value: t.value,
-            label: t.label,
-          }))
-        );
-
-        setCostData(
-          cost.trends.map((t: TrendData) => ({
-            date: new Date(t.timestamp).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            }),
-            value: t.value,
-            label: t.label,
-          }))
-        );
-      } catch (error) {
-        console.error('Failed to load trends:', error);
+        const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+        const trends = await fetchUsageTrends(days);
+        setData(trends);
+      } catch (err) {
+        console.error('Failed to fetch usage trends:', err);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
-    }
+    };
 
     loadData();
-  }, [days]);
+  }, [period]);
 
-  const chartData = activeChart === 'usage' ? usageData : costData;
-  const chartColor = activeChart === 'usage' ? '#6366f1' : '#10b981';
-  const chartLabel = activeChart === 'usage' ? 'Conversations' : 'Cost (USD)';
+  const maxValue = Math.max(...data.map(d => d.count), 1);
+  const totalRequests = data.reduce((sum, d) => sum + d.count, 0);
+  const avgPerDay = data.length > 0 ? Math.round(totalRequests / data.length) : 0;
+
+  const periods = [
+    { id: '7d' as const, label: '7 days' },
+    { id: '30d' as const, label: '30 days' },
+    { id: '90d' as const, label: '90 days' },
+  ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Usage Analytics</h3>
-          <p className="text-sm text-gray-500 mt-1">Track usage and costs over time</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <select
-            value={days}
-            onChange={(e) => setDays(Number(e.target.value))}
-            className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    <div
+      className="rounded-2xl overflow-hidden h-full"
+      style={{
+        background: 'var(--color-bg-secondary)',
+        border: '1px solid var(--color-border)'
+      }}
+    >
+      {/* Header */}
+      <div className="p-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Usage Analytics
+            </h2>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
+              Request volume over time
+            </p>
+          </div>
+          <div
+            className="flex gap-1 p-1 rounded-xl"
+            style={{ background: 'var(--color-bg-tertiary)' }}
           >
-            <option value={7}>7 days</option>
-            <option value={14}>14 days</option>
-            <option value={30}>30 days</option>
-          </select>
+            {periods.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setPeriod(p.id)}
+                className="py-1.5 px-3 text-xs font-medium rounded-lg transition-all duration-200"
+                style={{
+                  background: period === p.id ? 'var(--color-bg-secondary)' : 'transparent',
+                  color: period === p.id ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                  boxShadow: period === p.id ? 'var(--shadow-sm)' : 'none'
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Chart type toggle */}
-      <div className="px-6 pt-4">
-        <div className="inline-flex rounded-lg bg-gray-100 p-1">
-          <button
-            onClick={() => setActiveChart('usage')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              activeChart === 'usage'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Usage
-          </button>
-          <button
-            onClick={() => setActiveChart('cost')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              activeChart === 'cost'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Cost
-          </button>
+        {/* Summary Stats */}
+        <div className="flex gap-8 mt-6">
+          <div>
+            <p className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+              {totalRequests.toLocaleString()}
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+              Total requests
+            </p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold" style={{ color: 'var(--color-accent)' }}>
+              {avgPerDay.toLocaleString()}
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+              Daily average
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Chart */}
       <div className="p-6">
-        {isLoading ? (
-          <div className="h-64 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          </div>
-        ) : chartData.length === 0 ? (
-          <div className="h-64 flex items-center justify-center">
-            <div className="text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
-                />
-              </svg>
-              <p className="mt-2 text-sm text-gray-500">No data available</p>
-              <p className="text-xs text-gray-400">Start using the app to see analytics</p>
-            </div>
-          </div>
+        {loading ? (
+          <div className="h-[200px] animate-shimmer rounded-xl" />
         ) : (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#e5e7eb' }}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#e5e7eb' }}
-                  tickFormatter={(value) =>
-                    activeChart === 'cost' ? `$${value.toFixed(2)}` : value.toString()
-                  }
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                  }}
-                  formatter={(value: number) => [
-                    activeChart === 'cost' ? `$${value.toFixed(2)}` : value,
-                    chartLabel,
-                  ]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke={chartColor}
-                  strokeWidth={2}
-                  fill="url(#colorValue)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-[200px] flex items-end gap-1">
+            {data.map((item, index) => {
+              const height = (item.count / maxValue) * 100;
+              return (
+                <div
+                  key={item.date}
+                  className="flex-1 group relative"
+                >
+                  {/* Tooltip */}
+                  <div
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10"
+                    style={{
+                      background: 'var(--color-bg-elevated)',
+                      border: '1px solid var(--color-border)',
+                      boxShadow: 'var(--shadow-md)'
+                    }}
+                  >
+                    <p className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                      {item.count.toLocaleString()} requests
+                    </p>
+                    <p style={{ color: 'var(--color-text-muted)' }}>
+                      {new Date(item.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+
+                  {/* Bar */}
+                  <div
+                    className="w-full rounded-t-md transition-all duration-300 group-hover:opacity-80"
+                    style={{
+                      height: `${Math.max(height, 4)}%`,
+                      background: index === data.length - 1
+                        ? 'var(--gradient-accent)'
+                        : 'var(--color-accent-muted)',
+                      animationDelay: `${index * 30}ms`
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* X-axis labels */}
+        {!loading && data.length > 0 && (
+          <div className="flex justify-between mt-3 px-1">
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {new Date(data[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
+            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {new Date(data[data.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
           </div>
         )}
       </div>

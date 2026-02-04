@@ -1,176 +1,193 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  fetchLatencyLeaderboard,
-  fetchSuccessRateLeaderboard,
-  fetchPeerReviewLeaderboard,
-  LeaderboardEntry,
-} from '@/lib/api';
+import { fetchLeaderboard, LeaderboardEntry } from '@/lib/api';
 
-type LeaderboardType = 'latency' | 'success-rate' | 'peer-review';
-
-interface LeaderboardData {
-  latency: LeaderboardEntry[];
-  'success-rate': LeaderboardEntry[];
-  'peer-review': LeaderboardEntry[];
-}
+type RankingType = 'quality' | 'speed' | 'reliability';
 
 export default function ModelRankings() {
-  const [activeTab, setActiveTab] = useState<LeaderboardType>('latency');
-  const [data, setData] = useState<LeaderboardData>({
-    latency: [],
-    'success-rate': [],
-    'peer-review': [],
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  const [rankings, setRankings] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<RankingType>('quality');
 
   useEffect(() => {
-    async function loadData() {
+    const loadRankings = async () => {
+      setLoading(true);
       try {
-        const [latencyData, successData, peerReviewData] = await Promise.all([
-          fetchLatencyLeaderboard(10).catch(() => ({ leaderboard: [] })),
-          fetchSuccessRateLeaderboard(10).catch(() => ({ leaderboard: [] })),
-          fetchPeerReviewLeaderboard(10).catch(() => ({ leaderboard: [] })),
-        ]);
+        let type: 'peer-review' | 'latency' | 'success-rate' = 'peer-review';
+        if (activeTab === 'speed') type = 'latency';
+        if (activeTab === 'reliability') type = 'success-rate';
 
-        setData({
-          latency: latencyData.leaderboard,
-          'success-rate': successData.leaderboard,
-          'peer-review': peerReviewData.leaderboard,
-        });
-      } catch (error) {
-        console.error('Failed to load leaderboards:', error);
+        const data = await fetchLeaderboard(type);
+        setRankings(data.slice(0, 6));
+      } catch (err) {
+        console.error('Failed to fetch rankings:', err);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
-    }
+    };
 
-    loadData();
-  }, []);
+    loadRankings();
+  }, [activeTab]);
 
-  const tabs: { id: LeaderboardType; label: string }[] = [
-    { id: 'latency', label: 'Speed' },
-    { id: 'success-rate', label: 'Reliability' },
-    { id: 'peer-review', label: 'Quality' },
+  const tabs = [
+    { id: 'quality' as RankingType, label: 'Quality' },
+    { id: 'speed' as RankingType, label: 'Speed' },
+    { id: 'reliability' as RankingType, label: 'Reliability' },
   ];
 
-  const currentData = data[activeTab];
-
-  const formatValue = (entry: LeaderboardEntry) => {
-    if (activeTab === 'latency') {
-      return `${Math.round(entry.metric_value)}ms`;
-    } else if (activeTab === 'success-rate') {
-      return `${entry.metric_value.toFixed(1)}%`;
-    } else {
-      return `#${entry.metric_value.toFixed(1)}`;
-    }
+  const getModelColor = (index: number) => {
+    const colors = [
+      'var(--gradient-accent)',
+      'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)',
+      'var(--gradient-warm)',
+      'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+      'linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%)',
+      'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+    ];
+    return colors[index % colors.length];
   };
 
   const getRankBadge = (rank: number) => {
-    if (rank === 1) {
-      return (
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">
-          1
-        </span>
-      );
-    } else if (rank === 2) {
-      return (
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 text-xs font-medium">
-          2
-        </span>
-      );
-    } else if (rank === 3) {
-      return (
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs font-medium">
-          3
-        </span>
-      );
+    if (rank === 1) return { icon: '👑', color: '#ffaa00' };
+    if (rank === 2) return { icon: '🥈', color: '#c0c0c0' };
+    if (rank === 3) return { icon: '🥉', color: '#cd7f32' };
+    return { icon: `#${rank}`, color: 'var(--color-text-muted)' };
+  };
+
+  const formatValue = (entry: LeaderboardEntry) => {
+    if (activeTab === 'quality') {
+      return `${(entry.score * 100).toFixed(0)}%`;
     }
-    return (
-      <span className="inline-flex items-center justify-center w-6 h-6 text-gray-500 text-xs">
-        {rank}
-      </span>
-    );
+    if (activeTab === 'speed') {
+      return `${Math.round(entry.score)}ms`;
+    }
+    return `${(entry.score * 100).toFixed(1)}%`;
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Model Rankings</h3>
-        <p className="text-sm text-gray-500 mt-1">Compare model performance across metrics</p>
-      </div>
+    <div
+      className="rounded-2xl overflow-hidden h-full"
+      style={{
+        background: 'var(--color-bg-secondary)',
+        border: '1px solid var(--color-border)'
+      }}
+    >
+      {/* Header */}
+      <div className="p-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            Model Rankings
+          </h2>
+          <button
+            className="p-1.5 rounded-lg transition-colors"
+            style={{
+              background: 'var(--color-bg-tertiary)',
+              color: 'var(--color-text-muted)'
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex -mb-px">
+        {/* Tabs */}
+        <div
+          className="flex gap-1 p-1 rounded-xl"
+          style={{ background: 'var(--color-bg-tertiary)' }}
+        >
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className="flex-1 py-2 px-3 text-xs font-medium rounded-lg transition-all duration-200"
+              style={{
+                background: activeTab === tab.id ? 'var(--color-bg-secondary)' : 'transparent',
+                color: activeTab === tab.id ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                boxShadow: activeTab === tab.id ? 'var(--shadow-sm)' : 'none'
+              }}
             >
               {tab.label}
             </button>
           ))}
-        </nav>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="p-6">
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-center space-x-4 animate-pulse">
-                <div className="w-6 h-6 bg-gray-200 rounded-full"></div>
-                <div className="flex-1 h-4 bg-gray-200 rounded"></div>
-                <div className="w-16 h-4 bg-gray-200 rounded"></div>
-              </div>
-            ))}
-          </div>
-        ) : currentData.length === 0 ? (
-          <div className="text-center py-8">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+      {/* Rankings List */}
+      <div className="p-4">
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="h-14 rounded-xl animate-shimmer"
               />
-            </svg>
-            <p className="mt-2 text-sm text-gray-500">No data available yet</p>
-            <p className="text-xs text-gray-400">Start using the council to see rankings</p>
+            ))}
           </div>
         ) : (
-          <div className="space-y-3">
-            {currentData.map((entry) => (
-              <div
-                key={entry.model_id}
-                className="flex items-center space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                {getRankBadge(entry.rank)}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {entry.model_name}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">{entry.model_id}</p>
+          <div className="space-y-2">
+            {rankings.map((entry, index) => {
+              const badge = getRankBadge(index + 1);
+              return (
+                <div
+                  key={entry.model_id}
+                  className="group flex items-center gap-3 p-3 rounded-xl transition-all duration-200"
+                  style={{
+                    background: 'var(--color-bg-tertiary)',
+                    border: '1px solid transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-border-hover)';
+                    e.currentTarget.style.background = 'var(--color-bg-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'transparent';
+                    e.currentTarget.style.background = 'var(--color-bg-tertiary)';
+                  }}
+                >
+                  {/* Rank */}
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
+                    style={{
+                      background: index < 3 ? 'var(--color-bg-hover)' : 'transparent',
+                      color: badge.color
+                    }}
+                  >
+                    {index < 3 ? badge.icon : badge.icon}
+                  </div>
+
+                  {/* Model Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ background: getModelColor(index) }}
+                      />
+                      <p
+                        className="font-medium text-sm truncate"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {entry.model_id}
+                      </p>
+                    </div>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                      {entry.total_responses?.toLocaleString() || 0} responses
+                    </p>
+                  </div>
+
+                  {/* Score */}
+                  <div className="text-right">
+                    <p
+                      className="font-mono text-sm font-semibold"
+                      style={{ color: 'var(--color-accent)' }}
+                    >
+                      {formatValue(entry)}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-gray-900">
-                    {formatValue(entry)}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
