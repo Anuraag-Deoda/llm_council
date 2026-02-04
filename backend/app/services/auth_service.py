@@ -276,7 +276,8 @@ class AuthService:
         user: User,
         display_name: Optional[str] = None,
         avatar_url: Optional[str] = None,
-        preferences: Optional[dict] = None
+        preferences: Optional[dict] = None,
+        model_context: Optional[dict] = None
     ) -> User:
         """Update user profile"""
         if display_name is not None:
@@ -286,7 +287,10 @@ class AuthService:
             user.avatar_url = avatar_url
 
         if preferences is not None:
-            user.preferences = {**user.preferences, **preferences}
+            user.preferences = {**(user.preferences or {}), **preferences}
+
+        if model_context is not None:
+            user.model_context = {**(user.model_context or {}), **model_context}
 
         db.commit()
         db.refresh(user)

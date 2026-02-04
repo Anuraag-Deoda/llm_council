@@ -28,12 +28,50 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Model context - information models can use to personalize responses
+    model_context = Column(JSON, default=dict)  # {preferred_name, role, expertise, etc.}
+
     # Relationships - Note: back_populates defined in Conversation model
     conversations = relationship("Conversation", back_populates="user")
 
     __table_args__ = (
         Index('idx_user_email_active', 'email', 'is_active'),
     )
+
+    def get_model_context_prompt(self) -> str:
+        """Generate a prompt snippet with user context for models."""
+        context_parts = []
+
+        if self.display_name:
+            context_parts.append(f"The user's name is {self.display_name}.")
+
+        mc = self.model_context or {}
+
+        if mc.get("preferred_name"):
+            context_parts.append(f"Address them as {mc['preferred_name']}.")
+
+        if mc.get("role"):
+            context_parts.append(f"They work as a {mc['role']}.")
+
+        if mc.get("expertise"):
+            expertise = mc["expertise"]
+            if isinstance(expertise, list):
+                expertise = ", ".join(expertise)
+            context_parts.append(f"They have expertise in: {expertise}.")
+
+        if mc.get("communication_style"):
+            context_parts.append(f"Preferred communication style: {mc['communication_style']}.")
+
+        if mc.get("technical_level"):
+            context_parts.append(f"Technical proficiency: {mc['technical_level']}.")
+
+        if mc.get("custom_instructions"):
+            context_parts.append(f"Additional instructions: {mc['custom_instructions']}")
+
+        if not context_parts:
+            return ""
+
+        return "User context: " + " ".join(context_parts)
 
 
 class MagicLinkToken(Base):

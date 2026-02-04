@@ -1,7 +1,7 @@
 """
 Authentication routes for LLM Council
 """
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, Field
@@ -40,11 +40,22 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class ModelContextRequest(BaseModel):
+    """Model context settings for personalization"""
+    preferred_name: Optional[str] = None
+    role: Optional[str] = None
+    expertise: Optional[List[str]] = None
+    communication_style: Optional[str] = None  # "casual", "formal", "technical"
+    technical_level: Optional[str] = None  # "beginner", "intermediate", "expert"
+    custom_instructions: Optional[str] = None
+
+
 class UpdateProfileRequest(BaseModel):
     """Profile update request"""
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
     preferences: Optional[dict] = None
+    model_context: Optional[ModelContextRequest] = None
 
 
 class SetPasswordRequest(BaseModel):
@@ -60,6 +71,7 @@ class UserResponse(BaseModel):
     display_name: Optional[str]
     avatar_url: Optional[str]
     preferences: dict
+    model_context: dict
     is_active: bool
     has_password: bool
     created_at: str
@@ -125,6 +137,7 @@ def user_to_response(user) -> UserResponse:
         display_name=user.display_name,
         avatar_url=user.avatar_url,
         preferences=user.preferences or {},
+        model_context=user.model_context or {},
         is_active=user.is_active,
         has_password=user.password_hash is not None,
         created_at=user.created_at.isoformat() if user.created_at else None,
@@ -286,12 +299,17 @@ def update_me(
 
     Requires valid access token.
     """
+    model_context_dict = None
+    if request.model_context:
+        model_context_dict = request.model_context.model_dump(exclude_none=True)
+
     updated_user = auth_service.update_user(
         db,
         user=user,
         display_name=request.display_name,
         avatar_url=request.avatar_url,
-        preferences=request.preferences
+        preferences=request.preferences,
+        model_context=model_context_dict
     )
 
     return user_to_response(updated_user)
