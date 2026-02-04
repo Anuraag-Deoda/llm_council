@@ -52,6 +52,23 @@ class ConflictStatus(str, enum.Enum):
     DISMISSED = "dismissed"
 
 
+class ResolutionType(str, enum.Enum):
+    """How the conflict was resolved"""
+    SOURCE_OVERRIDE = "source_override"  # One source is more authoritative
+    TIME_OVERRIDE = "time_override"  # Newer information is preferred
+    SCOPE_OVERRIDE = "scope_override"  # One source applies to a different scope
+    INVALID_CONFLICT = "invalid_conflict"  # Not actually a conflict
+    MERGED = "merged"  # Both sources contain valid partial info
+    ESCALATED = "escalated"  # Requires human decision
+
+
+class ResolverType(str, enum.Enum):
+    """Who/what resolved the conflict"""
+    HUMAN = "human"
+    SYSTEM = "system"
+    LLM = "llm"
+
+
 class DocumentSource(Base):
     """
     Configuration for document sources (e.g., Slack workspace, Notion database).
@@ -185,6 +202,7 @@ class DocumentChunk(Base):
 class ConflictRecord(Base):
     """
     Records of detected conflicts between document chunks.
+    Enhanced with resolution feedback for trust learning.
     """
     __tablename__ = "rag_conflict_records"
 
@@ -206,6 +224,16 @@ class ConflictRecord(Base):
     resolution_notes = Column(Text, nullable=True)
     preferred_chunk_id = Column(Integer, nullable=True)  # Which chunk is preferred after resolution
 
+    # Enhanced resolution feedback (for trust learning)
+    resolution_type = Column(SQLEnum(ResolutionType), nullable=True, index=True)
+    resolver_type = Column(SQLEnum(ResolverType), nullable=True)  # human, system, or llm
+    resolution_confidence = Column(Float, nullable=True)  # How confident in the resolution
+
+    # Trust impact tracking
+    trust_adjustment_applied = Column(Boolean, default=False)
+    source_a_trust_delta = Column(Float, nullable=True)  # How much source A trust changed
+    source_b_trust_delta = Column(Float, nullable=True)  # How much source B trust changed
+
     # Detection context
     query = Column(Text, nullable=True)  # Query that triggered detection
     retrieval_log_id = Column(Integer, ForeignKey("rag_retrieval_logs.id", ondelete="SET NULL"), nullable=True)
@@ -225,6 +253,7 @@ class ConflictRecord(Base):
         Index('idx_conflict_chunks', 'chunk_a_id', 'chunk_b_id'),
         Index('idx_conflict_status_type', 'status', 'conflict_type'),
         Index('idx_conflict_confidence', 'confidence'),
+        Index('idx_conflict_resolution_type', 'resolution_type'),
     )
 
 
